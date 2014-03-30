@@ -1,3 +1,24 @@
+// go-geoserve provides an ip geolocation server that's made so that it can run
+// on Heroku.  It uses the MaxMind GeoIP2City Lite data form the MaxMind
+// website.  It checks for updates every minute and automatically downloads the
+// most recent version of that database.  At the moment, only IPv4 is supported.
+//
+// To request JSON geolocation information for your IP:
+//
+//    http://serene-plains-5039.herokuapp.com/lookup/
+//
+// To request JSOn geolocation information for a specific IP:
+//
+//    http://serene-plains-5039.herokuapp.com/lookup/66.69.242.177
+//
+// The server caches JSON results by ip address for low-latency lookups.
+//
+// When starting the server, the following environment variables control its
+// behavior:
+//
+//    PORT - integer port on which to listen
+//    DB - optional filename of local database file (useful for testing, not Heroku)
+//
 package main
 
 import (
