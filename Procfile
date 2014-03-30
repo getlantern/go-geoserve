@@ -1,1 +1,1 @@
-web: go-geoserve2
+web: go-geoserve

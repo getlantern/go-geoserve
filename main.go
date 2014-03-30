@@ -8,6 +8,7 @@ import (
 )
 
 func main() {
+	log.Println("Creating GeoServer, this can take a while")
 	geoServer, err := geoserve.NewServer(os.Getenv("DB"))
 	if err != nil {
 		log.Fatalf("Unable to create geoserve server: %s", err)
