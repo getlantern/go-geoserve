@@ -1,1 +1,1 @@
-web: demoapp
+web: go-geoserve
