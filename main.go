@@ -3,14 +3,6 @@
 // website.  It checks for updates every minute and automatically downloads the
 // most recent version of that database.  At the moment, only IPv4 is supported.
 //
-// To request JSON geolocation information for your IP:
-//
-//    http://serene-plains-5039.herokuapp.com/lookup/
-//
-// To request JSOn geolocation information for a specific IP:
-//
-//    http://serene-plains-5039.herokuapp.com/lookup/66.69.242.177
-//
 // The server caches JSON results by ip address for low-latency lookups.
 //
 // When starting the server, the following environment variables control its
@@ -18,6 +10,106 @@
 //
 //    PORT - integer port on which to listen
 //    DB - optional filename of local database file (useful for testing, not Heroku)
+//
+//
+// To request JSON geolocation information for your IP:
+//
+//    curl http://serene-plains-5039.herokuapp.com/lookup/
+//
+// To request JSON geolocation information for a specific IP:
+//
+//    curl http://serene-plains-5039.herokuapp.com/lookup/66.69.242.177
+//
+// Sample response:
+//
+//     {
+//         "City": {
+//             "GeoNameID": 4671654,
+//             "Names": {
+//                 "de": "Austin",
+//                 "en": "Austin",
+//                 "es": "Austin",
+//                 "fr": "Austin",
+//                 "ja": "オースティン",
+//                 "pt-BR": "Austin",
+//                 "ru": "Остин"
+//             }
+//         },
+//         "Continent": {
+//             "Code": "NA",
+//             "GeoNameID": 6255149,
+//             "Names": {
+//                 "de": "Nordamerika",
+//                 "en": "North America",
+//                 "es": "Norteamérica",
+//                 "fr": "Amérique du Nord",
+//                 "ja": "北アメリカ",
+//                 "pt-BR": "América do Norte",
+//                 "ru": "Северная Америка",
+//                 "zh-CN": "北美洲"
+//             }
+//         },
+//         "Country": {
+//             "GeoNameID": 6252001,
+//             "IsoCode": "US",
+//             "Names": {
+//                 "de": "USA",
+//                 "en": "United States",
+//                 "es": "Estados Unidos",
+//                 "fr": "États-Unis",
+//                 "ja": "アメリカ合衆国",
+//                 "pt-BR": "Estados Unidos",
+//                 "ru": "США",
+//                 "zh-CN": "美国"
+//             }
+//         },
+//         "Location": {
+//             "Latitude": 30.2672,
+//             "Longitude": -97.7431,
+//             "MetroCode": "635",
+//             "TimeZone": "America/Chicago"
+//         },
+//         "Postal": {
+//             "Code": ""
+//         },
+//         "RegisteredCountry": {
+//             "GeoNameID": 6252001,
+//             "IsoCode": "US",
+//             "Names": {
+//                 "de": "USA",
+//                 "en": "United States",
+//                 "es": "Estados Unidos",
+//                 "fr": "États-Unis",
+//                 "ja": "アメリカ合衆国",
+//                 "pt-BR": "Estados Unidos",
+//                 "ru": "США",
+//                 "zh-CN": "美国"
+//             }
+//         },
+//         "RepresentedCountry": {
+//             "GeoNameID": 0,
+//             "IsoCode": "",
+//             "Names": null,
+//             "Type": ""
+//         },
+//         "Subdivisions": [
+//             {
+//                 "GeoNameID": 4736286,
+//                 "IsoCode": "TX",
+//                 "Names": {
+//                     "en": "Texas",
+//                     "es": "Texas",
+//                     "ja": "テキサス州",
+//                     "ru": "Техас",
+//                     "zh-CN": "得克萨斯州"
+//                 }
+//             }
+//         ],
+//         "Traits": {
+//             "IsAnonymousProxy": false,
+//             "IsSatelliteProvider": false
+//         }
+//     }
 //
 package main
 
