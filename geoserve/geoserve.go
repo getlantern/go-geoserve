@@ -22,7 +22,7 @@ const (
 type GeoServer struct {
 	db       *geoip2.Reader
 	dbDate   time.Time
-	cache    map[string][]byte
+	cache    map[string][]byte // TODO: bound the cache
 	cacheGet chan get
 	dbUpdate chan dbu
 }
