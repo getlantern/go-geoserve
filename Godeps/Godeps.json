@@ -1,5 +1,5 @@
 {
-	"ImportPath": "github.com/oxtoacart/go-geoserve",
+	"ImportPath": "github.com/getlantern/go-geoserve",
 	"GoVersion": "devel +969a38842696 Sun May 04 23:00:47 2014 -0400",
 	"Deps": [
 		{

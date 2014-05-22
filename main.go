@@ -14,11 +14,11 @@
 //
 // To request JSON geolocation information for your IP:
 //
-//    curl http://serene-plains-5039.herokuapp.com/lookup/
+//    curl http://go-geoserve.herokuapp.com/lookup/
 //
 // To request JSON geolocation information for a specific IP:
 //
-//    curl http://serene-plains-5039.herokuapp.com/lookup/66.69.242.177
+//    curl http://go-geoserve.herokuapp.com/lookup/66.69.242.177
 //
 // Sample response:
 //
@@ -114,7 +114,7 @@
 package main
 
 import (
-	"github.com/oxtoacart/go-geoserve/geoserve"
+	"github.com/getlantern/go-geoserve/geoserve"
 	"log"
 	"net/http"
 	"os"
