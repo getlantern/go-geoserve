@@ -4,7 +4,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	geoip2 "github.com/oxtoacart/geoip2-golang"
+	geoip2 "github.com/oschwald/geoip2-golang"
 	"io/ioutil"
 	"log"
 	"net"
@@ -204,7 +204,7 @@ func lastModified(resp *http.Response) (time.Time, error) {
 
 // openDb opens a MaxMind in-memory db using the geoip2.Reader
 func openDb(dbData []byte) (*geoip2.Reader, error) {
-	db, err := geoip2.OpenBytes(dbData)
+	db, err := geoip2.FromBytes(dbData)
 	if err != nil {
 		return nil, fmt.Errorf("Unable to open database: %s", err)
 	} else {

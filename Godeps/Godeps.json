@@ -1,18 +1,16 @@
 {
 	"ImportPath": "github.com/oxtoacart/go-geoserve",
-	"GoVersion": "go1.2.1",
+	"GoVersion": "devel +969a38842696 Sun May 04 23:00:47 2014 -0400",
 	"Deps": [
 		{
-			"ImportPath": "github.com/mitchellh/mapstructure",
-			"Rev": "6b97cff17f16aef812d5c55c4892d40732d79eef"
+			"ImportPath": "github.com/oschwald/geoip2-golang",
+			"Comment": "v0.1.0-3-gf5a6adf",
+			"Rev": "f5a6adffc17dc4626626b09ca1285f26b257c720"
 		},
 		{
-			"ImportPath": "github.com/oxtoacart/geoip2-golang",
-			"Rev": "70c55604913d0518ba07f93a7c2ec71e5a996d72"
-		},
-		{
-			"ImportPath": "github.com/oxtoacart/maxminddb-golang",
-			"Rev": "2ef262cdf133f2c11918b892417b5c45d80f7e5a"
+			"ImportPath": "github.com/oschwald/maxminddb-golang",
+			"Comment": "v0.1.0-21-g8c69cd4",
+			"Rev": "8c69cd40823e974cf86a85979acd9430d5b0fbab"
 		}
 	]
 }
