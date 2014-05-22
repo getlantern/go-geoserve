@@ -1,6 +1,6 @@
 {
 	"ImportPath": "github.com/getlantern/go-geoserve",
-	"GoVersion": "1.2.2",
+	"GoVersion": "1.2.1",
 	"Deps": [
 		{
 			"ImportPath": "github.com/oschwald/geoip2-golang",
