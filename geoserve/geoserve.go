@@ -215,10 +215,7 @@ func clientIpFor(req *http.Request) string {
 	if clientIp == "" {
 		clientIp = strings.Split(req.RemoteAddr, ":")[0]
 	}
-	log.Printf("clientIp: %s", clientIp)
 	// clientIp may contain multiple ips, use the first
 	ips := strings.Split(clientIp, ",")
-	result := strings.TrimSpace(ips[len(ips)-1])
-	log.Printf("Result: %s", result)
-	return result
+	return strings.TrimSpace(ips[0])
 }
