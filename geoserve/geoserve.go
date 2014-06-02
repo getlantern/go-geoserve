@@ -218,10 +218,8 @@ func clientIpFor(req *http.Request) string {
 	clientIp := req.Header.Get("X-Forwarded-For")
 	if clientIp == "" {
 		clientIp = strings.Split(req.RemoteAddr, ":")[0]
-	} else {
-		// X-Forwarded-For may contain multiple ips, use the last
-		ips := strings.Split(clientIp, ",")
-		clientIp = ips[len(ips)-1]
 	}
-	return clientIp
+	// clientIp may contain multiple ips, use the last
+	ips := strings.Split(clientIp, ",")
+	return strings.TrimSpace(ips[len(ips)-1])
 }
