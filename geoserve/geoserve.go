@@ -72,12 +72,8 @@ func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, bas
 	// Use path as ip
 	ip := path
 	if ip == "" {
-		// When no path supplied, use remote address from X-Forwarded-For header
-		ip = req.Header.Get("X-Forwarded-For")
-	}
-	if ip == "" {
-		// When no X-Forwarded-For, use remote address
-		ip = strings.Split(req.RemoteAddr, ":")[0]
+		// When no path supplied, grab remote address or X-Forwarded-For
+		ip = clientIpFor(req)
 	}
 	g := get{ip, make(chan []byte)}
 	server.cacheGet <- g
@@ -85,7 +81,7 @@ func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, bas
 	if jsonData == nil {
 		resp.WriteHeader(500)
 	} else {
-		resp.Header().Set("X-Reflected-Ip", clientIpFor(req))
+		resp.Header().Set("X-Reflected-Ip", ip)
 		resp.Write(jsonData)
 	}
 }
