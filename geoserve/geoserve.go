@@ -85,6 +85,7 @@ func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, bas
 	if jsonData == nil {
 		resp.WriteHeader(500)
 	} else {
+		resp.Header().Set("X-Reflected-Ip", clientIpFor(req))
 		resp.Write(jsonData)
 	}
 }
@@ -210,4 +211,17 @@ func openDb(dbData []byte) (*geoip2.Reader, error) {
 	} else {
 		return db, nil
 	}
+}
+
+func clientIpFor(req *http.Request) string {
+	// Client requested their info
+	clientIp := req.Header.Get("X-Forwarded-For")
+	if clientIp == "" {
+		clientIp = strings.Split(req.RemoteAddr, ":")[0]
+	} else {
+		// X-Forwarded-For may contain multiple ips, use the last
+		ips := strings.Split(clientIp, ",")
+		clientIp = ips[len(ips)-1]
+	}
+	return clientIp
 }
