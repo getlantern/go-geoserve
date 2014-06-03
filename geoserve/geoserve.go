@@ -93,22 +93,22 @@ func (server *GeoServer) run() {
 	for {
 		select {
 		case g := <-server.cacheGet:
-			jsonData := server.cache[g.ip]
-			if jsonData == nil {
-				// No cache hit, look it up ourselves
-				geoData, err := server.db.City(net.ParseIP(g.ip))
+			// jsonData := server.cache[g.ip]
+			// if jsonData == nil {
+			// No cache hit, look it up ourselves
+			geoData, err := server.db.City(net.ParseIP(g.ip))
+			if err != nil {
+				log.Printf("Unable to look up ip address %s: %s", g.ip, err)
+			} else {
+				jsonData, err := json.Marshal(geoData)
 				if err != nil {
-					log.Printf("Unable to look up ip address %s: %s", g.ip, err)
-				} else {
-					jsonData, err = json.Marshal(geoData)
-					if err != nil {
-						log.Printf("Unable to encode json response for ip address: %s")
-					} else {
-						// Cache it
-						server.cache[g.ip] = jsonData
-					}
+					log.Printf("Unable to encode json response for ip address: %s")
+					// } else {
+					// 	// Cache it
+					// 	server.cache[g.ip] = jsonData
 				}
 			}
+			// }
 			g.resp <- jsonData
 		case update := <-server.dbUpdate:
 			// Update the database
