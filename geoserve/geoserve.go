@@ -4,25 +4,33 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
-	geoip2 "github.com/oschwald/geoip2-golang"
 	"io/ioutil"
-	"log"
 	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/getlantern/golog"
+	"github.com/golang/groupcache/lru"
+	geoip2 "github.com/oschwald/geoip2-golang"
 )
 
 const (
 	DB_URL = "https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
+
+	CacheSize = 50000
+)
+
+var (
+	log = golog.LoggerFor("go-geoserve")
 )
 
 // GeoServer is a server for IP geolocation information
 type GeoServer struct {
 	db       *geoip2.Reader
 	dbDate   time.Time
-	cache    map[string][]byte // TODO: bound the cache
+	cache    *lru.Cache
 	cacheGet chan get
 	dbUpdate chan dbu
 }
@@ -44,7 +52,7 @@ type dbu struct {
 // MaxMind's website.
 func NewServer(dbFile string) (server *GeoServer, err error) {
 	server = &GeoServer{
-		cache:    make(map[string][]byte),
+		cache:    lru.New(CacheSize),
 		cacheGet: make(chan get, 10000),
 		dbUpdate: make(chan dbu),
 	}
@@ -93,29 +101,37 @@ func (server *GeoServer) run() {
 	for {
 		select {
 		case g := <-server.cacheGet:
-			jsonData := server.cache[g.ip]
-			if jsonData == nil {
-				// No cache hit, look it up ourselves
+			var jsonData []byte
+			_jsonData, found := server.cache.Get(g.ip)
+			if found {
+				log.Trace("Cache hit")
+				jsonData = _jsonData.([]byte)
+			} else {
+				log.Trace("Cache miss, looking up geolocation info")
 				geoData, err := server.db.City(net.ParseIP(g.ip))
 				if err != nil {
-					log.Printf("Unable to look up ip address %s: %s", g.ip, err)
+					log.Errorf("Unable to look up ip address %s: %s", g.ip, err)
 				} else {
 					jsonData, err = json.Marshal(geoData)
 					if err != nil {
-						log.Printf("Unable to encode json response for ip address: %s", g.ip)
+						log.Errorf("Unable to encode json response for ip address: %s", g.ip)
 					} else {
 						// Cache it
-						server.cache[g.ip] = jsonData
+						server.cache.Add(g.ip, jsonData)
 					}
 				}
 			}
 			g.resp <- jsonData
 		case update := <-server.dbUpdate:
-			// Update the database
+			if server.db != nil {
+				log.Debug("Closing old database")
+				server.db.Close()
+			}
+			log.Debug("Applying new database")
 			server.db = update.db
 			server.dbDate = update.dbDate
-			// Clear the cache
-			server.cache = make(map[string][]byte)
+			log.Debug("Clearing cached lookups")
+			server.cache = lru.New(CacheSize)
 		}
 	}
 }
@@ -128,17 +144,17 @@ func (server *GeoServer) keepDbCurrent() {
 		time.Sleep(1 * time.Minute)
 		headResp, err := http.Head(DB_URL)
 		if err != nil {
-			log.Printf("Unable to request modified of %s: %s", DB_URL, err)
+			log.Errorf("Unable to request modified of %s: %s", DB_URL, err)
 		}
 		lm, err := lastModified(headResp)
 		if err != nil {
-			log.Printf("Unable to parse modified date for %s: %s", DB_URL, err)
+			log.Errorf("Unable to parse modified date for %s: %s", DB_URL, err)
 		}
 		if lm.After(server.dbDate) {
-			log.Printf("Updating database from web")
+			log.Debug("Updating database from web")
 			db, dbDate, err := readDbFromWeb()
 			if err != nil {
-				log.Printf("Unable to update database from web: %s", err)
+				log.Errorf("Unable to update database from web: %s", err)
 			} else {
 				server.dbUpdate <- dbu{db, dbDate}
 			}
