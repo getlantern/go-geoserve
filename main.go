@@ -117,8 +117,8 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/getlantern/go-geoserve/Godeps/_workspace/src/github.com/getlantern/golog"
 	"github.com/getlantern/go-geoserve/geoserve"
-	"github.com/getlantern/golog"
 )
 
 var (

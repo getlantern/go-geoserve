@@ -2,7 +2,7 @@ package maxminddb_test
 
 import (
 	"fmt"
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/getlantern/go-geoserve/Godeps/_workspace/src/github.com/oschwald/maxminddb-golang"
 	"log"
 	"net"
 )

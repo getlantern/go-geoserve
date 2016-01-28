@@ -5,7 +5,7 @@
 package geoip2
 
 import (
-	"github.com/oschwald/maxminddb-golang"
+	"github.com/getlantern/go-geoserve/Godeps/_workspace/src/github.com/oschwald/maxminddb-golang"
 	"net"
 )
 
