@@ -1,0 +1,8 @@
+github.com/getlantern/golog v0.0.0-20150810151305-157ff085527f h1:zYhpaulBXySR2Cg/YyCKviCwABA94C7cFafe4hsXfo0=
+github.com/getlantern/golog v0.0.0-20150810151305-157ff085527f/go.mod h1:Vwx1Cg64gCdIalad44uvQsKZw6LsVczIKZrUBStEjVw=
+github.com/golang/groupcache v0.0.0-20150125180832-604ed5785183 h1:jVvxxvU4YxIF7cDz21H4Xh2K2ztj/tzglkFiyTusFMo=
+github.com/golang/groupcache v0.0.0-20150125180832-604ed5785183/go.mod h1:cIg4eruTrX1D+g88fzRXU5OdNfaM+9IcxsU14FzY7Hc=
+github.com/oschwald/geoip2-golang v0.1.1-0.20140511222235-f5a6adffc17d h1:Ba8txV2duGpZDQUwQTRilZ2bTu4PRPXZNg4Vtj/4/iA=
+github.com/oschwald/geoip2-golang v0.1.1-0.20140511222235-f5a6adffc17d/go.mod h1:0LTTzix/Ao1uMvOhAV4iLU0Lz7eCrP94qZWBTDKf0iE=
+github.com/oschwald/maxminddb-golang v0.1.1-0.20140511220746-8c69cd40823e h1:Qd7s+t4rt/UDM8tqWBQFMCKdRvWXcn/aPm1gGWBmeFQ=
+github.com/oschwald/maxminddb-golang v0.1.1-0.20140511220746-8c69cd40823e/go.mod h1:3jhIUymTJ5VREKyIhWm66LJiQt04F0UCDdodShpjWsY=
