@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	DB_URL = "https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
+	DB_URL = "https://s3.amazonaws.com/lantern/GeoLite2-City.mmdb.gz"
 
 	CacheSize = 50000
 )
