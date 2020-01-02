@@ -99,17 +99,19 @@ func (server *GeoServer) run() {
 	for {
 		select {
 		case g := <-server.cacheGet:
-			_jsonData, found := server.cache.Get(g.ip)
-			if found {
+
+			if cached, found := server.cache.Get(g.ip); found {
 				log.Trace("Cache hit")
-				g.resp <- _jsonData.([]byte)
+				g.resp <- cached.([]byte)
+			} else {
+				jsonData, err := server.lookupDB(g.ip)
+				if err != nil {
+					log.Error(err)
+				} else {
+					server.cache.Add(g.ip, jsonData)
+				}
+				g.resp <- jsonData
 			}
-			jsonData, err := server.lookupDB(g.ip)
-			if err != nil {
-				log.Error(err)
-			}
-			server.cache.Add(g.ip, jsonData)
-			g.resp <- jsonData
 		case db := <-server.dbUpdate:
 			if server.db != nil {
 				log.Debug("Closing old database")
