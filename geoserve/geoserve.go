@@ -1,8 +1,8 @@
 package geoserve
 
 import (
-	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -13,26 +13,28 @@ import (
 
 	"github.com/getlantern/golog"
 	"github.com/golang/groupcache/lru"
+	"github.com/mholt/archiver/v3"
 	geoip2 "github.com/oschwald/geoip2-golang"
 )
 
 const (
-	DB_URL = "https://geolite.maxmind.com/download/geoip/database/GeoLite2-City.mmdb.gz"
+	DB_URL = "https://download.maxmind.com/app/geoip_download?license_key=%s&edition_id=GeoLite2-City&suffix=tar.gz"
 
 	CacheSize = 50000
 )
 
 var (
-	log = golog.LoggerFor("go-geoserve")
+	log            = golog.LoggerFor("go-geoserve")
+	errNotModified = errors.New("unmodified")
 )
 
 // GeoServer is a server for IP geolocation information
 type GeoServer struct {
 	db       *geoip2.Reader
-	dbDate   time.Time
+	dbURL    string
 	cache    *lru.Cache
 	cacheGet chan get
-	dbUpdate chan dbu
+	dbUpdate chan *geoip2.Reader
 }
 
 // get encapsulates a request to geolocate an ip address
@@ -41,34 +43,30 @@ type get struct {
 	resp chan []byte
 }
 
-// dbu encapsulates an update to the MaxMind database
-type dbu struct {
-	db     *geoip2.Reader
-	dbDate time.Time
-}
-
 // NewServer constructs a new GeoServer using the (optional) uncompressed dbFile.
 // If dbFile is "", then this will fetch the latest GeoLite2-City database from
-// MaxMind's website.
-func NewServer(dbFile string) (server *GeoServer, err error) {
+// MaxMind's website using the license_key provided.
+func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
 	server = &GeoServer{
 		cache:    lru.New(CacheSize),
 		cacheGet: make(chan get, 10000),
-		dbUpdate: make(chan dbu),
+		dbUpdate: make(chan *geoip2.Reader),
 	}
+	var lastModified time.Time
 	if dbFile != "" {
-		server.db, server.dbDate, err = readDbFromFile(dbFile)
+		server.db, lastModified, err = readDbFromFile(dbFile)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		server.db, server.dbDate, err = readDbFromWeb()
+		server.dbURL = fmt.Sprintf(DB_URL, license_key)
+		server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
 		if err != nil {
 			return nil, err
 		}
 	}
 	go server.run()
-	go server.keepDbCurrent()
+	go server.keepDbCurrent(lastModified)
 	return
 }
 
@@ -101,64 +99,59 @@ func (server *GeoServer) run() {
 	for {
 		select {
 		case g := <-server.cacheGet:
-			var jsonData []byte
-			_jsonData, found := server.cache.Get(g.ip)
-			if found {
+
+			if cached, found := server.cache.Get(g.ip); found {
 				log.Trace("Cache hit")
-				jsonData = _jsonData.([]byte)
+				g.resp <- cached.([]byte)
 			} else {
-				log.Trace("Cache miss, looking up geolocation info")
-				geoData, err := server.db.City(net.ParseIP(g.ip))
+				jsonData, err := server.lookupDB(g.ip)
 				if err != nil {
-					log.Errorf("Unable to look up ip address %s: %s", g.ip, err)
+					log.Error(err)
 				} else {
-					jsonData, err = json.Marshal(geoData)
-					if err != nil {
-						log.Errorf("Unable to encode json response for ip address: %s", g.ip)
-					} else {
-						// Cache it
-						server.cache.Add(g.ip, jsonData)
-					}
+					server.cache.Add(g.ip, jsonData)
 				}
+				g.resp <- jsonData
 			}
-			g.resp <- jsonData
-		case update := <-server.dbUpdate:
+		case db := <-server.dbUpdate:
 			if server.db != nil {
 				log.Debug("Closing old database")
 				server.db.Close()
 			}
 			log.Debug("Applying new database")
-			server.db = update.db
-			server.dbDate = update.dbDate
+			server.db = db
 			log.Debug("Clearing cached lookups")
 			server.cache = lru.New(CacheSize)
 		}
 	}
 }
 
-// keepDbCurrent checks for new versions of the database on the web every minute
-// by issuing a HEAD request.  If a new database is found, this downloads it and
-// submits it to server.dbUpdate for the run() routine to pick up.
-func (server *GeoServer) keepDbCurrent() {
+func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
+	geoData, err := server.db.City(net.ParseIP(ip))
+	if err != nil {
+		return nil, fmt.Errorf("Unable to look up ip address %s: %s", ip, err)
+	}
+	jsonData, err := json.Marshal(geoData)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to encode json response for ip address: %s", ip)
+	}
+	return jsonData, nil
+}
+
+// keepDbCurrent checks the MaxMind database URL every hour and downloads it if it's
+// newer and submits it to server.dbUpdate for the run() routine to pick up.
+func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 	for {
-		time.Sleep(1 * time.Minute)
-		headResp, err := http.Head(DB_URL)
+		time.Sleep(1 * time.Hour)
+		db, modifiedTime, err := readDbFromWeb(server.dbURL, lastModified)
+		if err == errNotModified {
+			continue
+		}
 		if err != nil {
-			log.Errorf("Unable to request modified of %s: %s", DB_URL, err)
+			log.Errorf("Unable to update database from web: %s", err)
+			continue
 		}
-		lm, err := lastModified(headResp)
-		if err != nil {
-			log.Errorf("Unable to parse modified date for %s: %s", DB_URL, err)
-		}
-		if lm.After(server.dbDate) {
-			log.Debug("Updating database from web")
-			db, dbDate, err := readDbFromWeb()
-			if err != nil {
-				log.Errorf("Unable to update database from web: %s", err)
-			} else {
-				server.dbUpdate <- dbu{db, dbDate}
-			}
-		}
+		lastModified = modifiedTime
+		server.dbUpdate <- db
 	}
 }
 
@@ -172,45 +165,66 @@ func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("Unable to stat db file %s: %s", dbFile, err)
 	}
-	dbDate := fileInfo.ModTime()
+	lastModified := fileInfo.ModTime()
 	db, err := openDb(dbData)
 	if err != nil {
 		return nil, time.Time{}, err
 	} else {
-		return db, dbDate, nil
+		return db, lastModified, nil
 	}
 }
 
 // readDbFromWeb reads the MaxMind database and timestamp from the web
-func readDbFromWeb() (*geoip2.Reader, time.Time, error) {
-	dbResp, err := http.Get(DB_URL)
+func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.Time, error) {
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to get database from %s: %s", DB_URL, err)
+		return nil, time.Time{}, err
 	}
-	gzipDbData, err := gzip.NewReader(dbResp.Body)
+	req.Header.Add("If-Modified-Since", ifModifiedSince.Format(http.TimeFormat))
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to open gzip reader on response body%s", err)
+		return nil, time.Time{}, fmt.Errorf("Unable to get database from %s: %s", url, err)
 	}
-	defer gzipDbData.Close()
-	dbData, err := ioutil.ReadAll(gzipDbData)
-	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to fetch database from HTTP response: %s", err)
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotModified {
+		return nil, time.Time{}, errNotModified
 	}
-	dbDate, err := lastModified(dbResp)
+	if resp.StatusCode != http.StatusOK {
+		return nil, time.Time{}, fmt.Errorf("unexpected HTTP status %v", resp.Status)
+	}
+	lastModified, err := getLastModified(resp)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to parse Last-Modified header %s: %s", dbDate, err)
-	} else {
-		db, err := openDb(dbData)
+		return nil, time.Time{}, fmt.Errorf("Unable to parse Last-Modified header %s: %s", lastModified, err)
+	}
+
+	unzipper := archiver.NewTarGz()
+	err = unzipper.Open(resp.Body, 0)
+	if err != nil {
+		return nil, time.Time{}, err
+	}
+	defer unzipper.Close()
+	for {
+		f, err := unzipper.Read()
 		if err != nil {
 			return nil, time.Time{}, err
-		} else {
-			return db, dbDate, nil
+		}
+		if f.Name() == "GeoLite2-City.mmdb" {
+			dbData, err := ioutil.ReadAll(f)
+			if err != nil {
+				return nil, time.Time{}, err
+			}
+			db, err := openDb(dbData)
+			if err != nil {
+				return nil, time.Time{}, err
+			}
+			return db, lastModified, nil
 		}
 	}
+	return nil, time.Time{}, err
 }
 
-// lastModified parses the Last-Modified header from a response
-func lastModified(resp *http.Response) (time.Time, error) {
+// getLastModified parses the Last-Modified header from a response
+func getLastModified(resp *http.Response) (time.Time, error) {
 	lastModified := resp.Header.Get("Last-Modified")
 	return http.ParseTime(lastModified)
 }

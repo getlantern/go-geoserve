@@ -117,7 +117,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/getlantern/go-geoserve/Godeps/_workspace/src/github.com/getlantern/golog"
+	"github.com/getlantern/golog"
+
 	"github.com/getlantern/go-geoserve/geoserve"
 )
 
@@ -127,7 +128,7 @@ var (
 
 func main() {
 	log.Debug("Creating GeoServer, this can take a while")
-	geoServer, err := geoserve.NewServer(os.Getenv("DB"))
+	geoServer, err := geoserve.NewServer(os.Getenv("DB"), os.Getenv("MAXMIND_LICENSE_KEY"))
 	if err != nil {
 		log.Fatalf("Unable to create geoserve server: %s", err)
 	}
