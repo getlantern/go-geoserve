@@ -185,6 +185,7 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("Unable to get database from %s: %s", url, err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotModified {
 		return nil, time.Time{}, errNotModified
 	}
@@ -195,7 +196,6 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 	if err != nil {
 		return nil, time.Time{}, fmt.Errorf("Unable to parse Last-Modified header %s: %s", lastModified, err)
 	}
-	defer resp.Body.Close()
 
 	unzipper := archiver.NewTarGz()
 	err = unzipper.Open(resp.Body, 0)
