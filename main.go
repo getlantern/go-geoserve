@@ -1,7 +1,7 @@
 // go-geoserve provides an ip geolocation server that's made so that it can run
 // on Heroku.  It uses the MaxMind GeoIP2City Lite data form the MaxMind
 // website.  It checks for updates every minute and automatically downloads the
-// most recent version of that database.  At the moment, only IPv4 is supported.
+// most recent version of that database.
 //
 // The server caches JSON results by ip address for low-latency lookups.
 //
