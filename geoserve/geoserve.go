@@ -70,10 +70,14 @@ func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
 	return
 }
 
-// Handle is used to handle requests from an HTTP server.  basePath is the path
+// Handle is used to handle requests from an HTTP server. basePath is the path
 // at which the containing request handler is registered, and is used to extract
-// the ip address from the remainder of the path.
-func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, basePath string) {
+// the ip address from the remainder of the path. allowOrigin is the cors
+// response config, if not empty it is written to the response header.
+func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, basePath string, allowOrigin string) {
+	if allowOrigin != "" {
+		(resp).Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	}
 	path := strings.Replace(req.URL.Path, basePath, "", 1)
 	// Use path as ip
 	ip := path

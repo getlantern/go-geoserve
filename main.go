@@ -10,6 +10,7 @@
 //
 //    PORT - integer port on which to listen
 //    DB - optional filename of local database file (useful for testing, not Heroku)
+//    ALLOW_ORIGIN - optional cors access control for the response header ("*", "example.com", etc.)
 //
 //
 // To request JSON geolocation information for your IP:
@@ -132,11 +133,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Unable to create geoserve server: %s", err)
 	}
+	allowOrigin := os.Getenv("ALLOW_ORIGIN")
+	log.Debugf("Access-Control-Allow-Origin set to: %s", allowOrigin)
 	http.HandleFunc("/lookup/", func(resp http.ResponseWriter, req *http.Request) {
-		geoServer.Handle(resp, req, "/lookup/")
+		geoServer.Handle(resp, req, "/lookup/", allowOrigin)
 	})
 	http.HandleFunc("/lookup", func(resp http.ResponseWriter, req *http.Request) {
-		geoServer.Handle(resp, req, "/lookup")
+		geoServer.Handle(resp, req, "/lookup", allowOrigin)
 	})
 	port := os.Getenv("PORT")
 	log.Debugf("About to listen at port: %s", port)
