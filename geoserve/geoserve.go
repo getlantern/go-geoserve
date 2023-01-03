@@ -74,9 +74,9 @@ func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
 // from the ALLOW_ORIGIN environment variable. If empty, no access control is
 // not added to the response header.
 func HandleCors(resp *http.ResponseWriter, allowOrigin string) {
-    if allowOrigin != "" {
-        (*resp).Header().Set("Access-Control-Allow-Origin", allowOrigin)
-    }
+	if allowOrigin != "" {
+		(*resp).Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	}
 }
 
 // Handle is used to handle requests from an HTTP server. basePath is the path
