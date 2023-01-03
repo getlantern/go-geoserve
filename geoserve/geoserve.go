@@ -84,7 +84,7 @@ func HandleCors(resp *http.ResponseWriter, allowOrigin string) {
 // the ip address from the remainder of the path. allowOrigin is the cors
 // response config.
 func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, basePath string, allowOrigin string) {
-    HandleCors(&resp, allowOrigin)
+    	HandleCors(&resp, allowOrigin)
 	path := strings.Replace(req.URL.Path, basePath, "", 1)
 	// Use path as ip
 	ip := path
