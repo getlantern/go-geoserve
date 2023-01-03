@@ -75,9 +75,9 @@ func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
 // the ip address from the remainder of the path. allowOrigin is the cors
 // response config, if not empty it is written to the response header.
 func (server *GeoServer) Handle(resp http.ResponseWriter, req *http.Request, basePath string, allowOrigin string) {
-    if allowOrigin != "" {
-        (resp).Header().Set("Access-Control-Allow-Origin", allowOrigin)
-    }
+	if allowOrigin != "" {
+		(resp).Header().Set("Access-Control-Allow-Origin", allowOrigin)
+	}
 	path := strings.Replace(req.URL.Path, basePath, "", 1)
 	// Use path as ip
 	ip := path
