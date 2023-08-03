@@ -2,8 +2,7 @@ package geoserve
 
 import (
 	"encoding/json"
-	"errors"
-	"fmt"
+	gerrors "errors"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"github.com/mholt/archiver/v3"
 	geoip2 "github.com/oschwald/geoip2-golang"
 
+	errors "github.com/getlantern/errors"
+
 	"github.com/getlantern/golog"
 )
 
@@ -24,7 +25,7 @@ const (
 
 var (
 	log            = golog.LoggerFor("go-geoserve")
-	errNotModified = errors.New("unmodified")
+	errNotModified = gerrors.New("unmodified")
 )
 
 // GeoServer is a server for IP geolocation information
@@ -55,13 +56,13 @@ func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 	if dbFile != "" {
 		server.db, lastModified, err = readDbFromFile(dbFile)
 		if err != nil {
-			return nil, err
+			return nil, errors.New("unable to read DB from file: %v", err)
 		}
 	} else {
 		server.dbURL = dbURL
 		server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
 		if err != nil {
-			return nil, err
+			return nil, errors.New("unable to read DB from web: %v", err)
 		}
 	}
 	go server.run()
@@ -131,11 +132,11 @@ func (server *GeoServer) run() {
 func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
 	geoData, err := server.db.City(net.ParseIP(ip))
 	if err != nil {
-		return nil, fmt.Errorf("Unable to look up ip address %s: %s", ip, err)
+		return nil, errors.New("Unable to look up ip address %s: %s", ip, err)
 	}
 	jsonData, err := json.Marshal(geoData)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to encode json response for ip address: %s", ip)
+		return nil, errors.New("Unable to encode json response for ip address: %s", ip)
 	}
 	return jsonData, nil
 }
@@ -162,16 +163,16 @@ func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
 	dbData, err := ioutil.ReadFile(dbFile)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to read db file %s: %s", dbFile, err)
+		return nil, time.Time{}, errors.New("Unable to read db file %s: %s", dbFile, err)
 	}
 	fileInfo, err := os.Stat(dbFile)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to stat db file %s: %s", dbFile, err)
+		return nil, time.Time{}, errors.New("Unable to stat db file %s: %s", dbFile, err)
 	}
 	lastModified := fileInfo.ModTime()
 	db, err := openDb(dbData)
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, errors.New("unable to open db from file %s: %v", dbFile, err)
 	} else {
 		return db, lastModified, nil
 	}
@@ -181,44 +182,44 @@ func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
 func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.Time, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, errors.New("unable to construct HTTP request for file: %v", err)
 	}
 	req.Header.Add("If-Modified-Since", ifModifiedSince.Format(http.TimeFormat))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to get database from %s: %s", url, err)
+		return nil, time.Time{}, errors.New("Unable to get database from %s: %s", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotModified {
 		return nil, time.Time{}, errNotModified
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, time.Time{}, fmt.Errorf("unexpected HTTP status %v", resp.Status)
+		return nil, time.Time{}, errors.New("unexpected HTTP status %v", resp.Status)
 	}
 	lastModified, err := getLastModified(resp)
 	if err != nil {
-		return nil, time.Time{}, fmt.Errorf("Unable to parse Last-Modified header %s: %s", lastModified, err)
+		return nil, time.Time{}, errors.New("Unable to parse Last-Modified header %s: %s", lastModified, err)
 	}
 
 	unzipper := archiver.NewTarGz()
 	err = unzipper.Open(resp.Body, 0)
 	if err != nil {
-		return nil, time.Time{}, err
+		return nil, time.Time{}, errors.New("unable to unzip tar.gz: %v", err)
 	}
 	defer unzipper.Close()
 	for {
 		f, err := unzipper.Read()
 		if err != nil {
-			return nil, time.Time{}, err
+			return nil, time.Time{}, errors.New("unable to read from tar.gz: %v", err)
 		}
 		if f.Name() == "GeoLite2-City.mmdb" {
 			dbData, err := ioutil.ReadAll(f)
 			if err != nil {
-				return nil, time.Time{}, err
+				return nil, time.Time{}, errors.New("unable to read GeoLite2-City.mmdb: %v", err)
 			}
 			db, err := openDb(dbData)
 			if err != nil {
-				return nil, time.Time{}, err
+				return nil, time.Time{}, errors.New("unable to open db: %v", err)
 			}
 			return db, lastModified, nil
 		}
@@ -236,7 +237,7 @@ func getLastModified(resp *http.Response) (time.Time, error) {
 func openDb(dbData []byte) (*geoip2.Reader, error) {
 	db, err := geoip2.FromBytes(dbData)
 	if err != nil {
-		return nil, fmt.Errorf("Unable to open database: %s", err)
+		return nil, errors.New("Unable to open database: %s", err)
 	} else {
 		return db, nil
 	}
