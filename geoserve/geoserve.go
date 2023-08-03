@@ -11,15 +11,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/getlantern/golog"
 	"github.com/golang/groupcache/lru"
 	"github.com/mholt/archiver/v3"
 	geoip2 "github.com/oschwald/geoip2-golang"
+
+	"github.com/getlantern/golog"
 )
 
 const (
-	DB_URL = "https://download.maxmind.com/app/geoip_download?license_key=%s&edition_id=GeoLite2-City&suffix=tar.gz"
-
 	CacheSize = 50000
 )
 
@@ -45,8 +44,8 @@ type get struct {
 
 // NewServer constructs a new GeoServer using the (optional) uncompressed dbFile.
 // If dbFile is "", then this will fetch the latest GeoLite2-City database from
-// MaxMind's website using the license_key provided.
-func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
+// the specified DBURL
+func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 	server = &GeoServer{
 		cache:    lru.New(CacheSize),
 		cacheGet: make(chan get, 10000),
@@ -59,7 +58,7 @@ func NewServer(dbFile, license_key string) (server *GeoServer, err error) {
 			return nil, err
 		}
 	} else {
-		server.dbURL = fmt.Sprintf(DB_URL, license_key)
+		server.dbURL = dbURL
 		server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
 		if err != nil {
 			return nil, err
