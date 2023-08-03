@@ -130,7 +130,7 @@ func (server *GeoServer) run() {
 }
 
 func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
-	geoData, err := server.db.City(net.ParseIP(ip))
+	geoData, err := server.db.Country(net.ParseIP(ip))
 	if err != nil {
 		return nil, errors.New("Unable to look up ip address %s: %s", ip, err)
 	}
@@ -212,10 +212,10 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 		if err != nil {
 			return nil, time.Time{}, errors.New("unable to read from tar.gz: %v", err)
 		}
-		if f.Name() == "GeoLite2-City.mmdb" {
+		if f.Name() == "GeoLite2-Country.mmdb" {
 			dbData, err := ioutil.ReadAll(f)
 			if err != nil {
-				return nil, time.Time{}, errors.New("unable to read GeoLite2-City.mmdb: %v", err)
+				return nil, time.Time{}, errors.New("unable to read GeoLite2-Country.mmdb: %v", err)
 			}
 			db, err := openDb(dbData)
 			if err != nil {
@@ -224,7 +224,6 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 			return db, lastModified, nil
 		}
 	}
-	return nil, time.Time{}, err
 }
 
 // getLastModified parses the Last-Modified header from a response
