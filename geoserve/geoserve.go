@@ -53,6 +53,7 @@ func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 		dbUpdate: make(chan *geoip2.Reader),
 	}
 	var lastModified time.Time
+	server.dbURL = dbURL
 	if dbFile != "" {
 		server.db, lastModified, err = readDbFromFile(dbFile)
 		if err != nil {
@@ -60,10 +61,12 @@ func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 		}
 	} else {
 		server.dbURL = dbURL
-		server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
-		if err != nil {
-			return nil, errors.New("unable to read DB from web url %v: %v", server.dbURL, err)
-		}
+		/*
+			server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
+			if err != nil {
+				return nil, errors.New("unable to read DB from web url %v: %v", server.dbURL, err)
+			}
+		*/
 	}
 	go server.run()
 	go server.keepDbCurrent(lastModified)
@@ -130,6 +133,9 @@ func (server *GeoServer) run() {
 }
 
 func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
+	if server.db == nil {
+		return nil, errors.New("No database available")
+	}
 	geoData, err := server.db.Country(net.ParseIP(ip))
 	if err != nil {
 		return nil, errors.New("Unable to look up ip address %s: %s", ip, err)
@@ -145,7 +151,6 @@ func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
 // newer and submits it to server.dbUpdate for the run() routine to pick up.
 func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 	for {
-		time.Sleep(1 * time.Hour)
 		db, modifiedTime, err := readDbFromWeb(server.dbURL, lastModified)
 		if err == errNotModified {
 			continue
@@ -156,6 +161,7 @@ func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 		}
 		lastModified = modifiedTime
 		server.dbUpdate <- db
+		time.Sleep(1 * time.Hour)
 	}
 }
 
