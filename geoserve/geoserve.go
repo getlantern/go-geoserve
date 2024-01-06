@@ -204,6 +204,7 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 		return nil, time.Time{}, errors.New("unable to construct HTTP request for file: %v", err)
 	}
 	req.Header.Add("If-Modified-Since", ifModifiedSince.Format(http.TimeFormat))
+	log.Debugf("Requesting database from %s", url)
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, time.Time{}, errors.New("Unable to get database from '%s': %s", url, err)
