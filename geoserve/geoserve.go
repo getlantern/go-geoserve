@@ -151,18 +151,31 @@ func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
 // newer and submits it to server.dbUpdate for the run() routine to pick up.
 func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 	for {
-		db, modifiedTime, err := readDbFromWeb(server.dbURL, lastModified)
-		if err == errNotModified {
-			continue
-		}
+		lm, err := server.updateDb(lastModified)
 		if err != nil {
-			log.Errorf("Unable to update database from web: %s", err)
-			continue
+			log.Errorf("Unable to update database from web %v: %s", server.dbURL, err)
+		} else {
+			lastModified = lm
 		}
-		lastModified = modifiedTime
-		server.dbUpdate <- db
-		time.Sleep(1 * time.Hour)
 	}
+}
+
+func (server *GeoServer) updateDb(lastModified time.Time) (time.Time, error) {
+	sleepInterval := 1 * time.Hour
+	defer func() {
+		time.Sleep(sleepInterval)
+	}()
+	db, modifiedTime, err := readDbFromWeb(server.dbURL, lastModified)
+	if err == errNotModified {
+		sleepInterval = 5 * time.Minute
+		return time.Time{}, err
+	}
+	if err != nil {
+		sleepInterval = 5 * time.Minute
+		return time.Time{}, err
+	}
+	server.dbUpdate <- db
+	return modifiedTime, nil
 }
 
 // readDbFromFile reads the MaxMind database and timestamp from a file
@@ -193,7 +206,7 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 	req.Header.Add("If-Modified-Since", ifModifiedSince.Format(http.TimeFormat))
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, time.Time{}, errors.New("Unable to get database from %s: %s", url, err)
+		return nil, time.Time{}, errors.New("Unable to get database from '%s': %s", url, err)
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotModified {
@@ -218,10 +231,10 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 		if err != nil {
 			return nil, time.Time{}, errors.New("unable to read from tar.gz: %v", err)
 		}
-		if f.Name() == "GeoLite2-Country.mmdb" {
+		if f.Name() == "GeoLite2-Country.mmdb" || f.Name() == "GeoLite2-City.mmdb" {
 			dbData, err := io.ReadAll(f)
 			if err != nil {
-				return nil, time.Time{}, errors.New("unable to read GeoLite2-Country.mmdb: %v", err)
+				return nil, time.Time{}, errors.New("unable to read %v: %v", f.Name(), err)
 			}
 			db, err := openDb(dbData)
 			if err != nil {
