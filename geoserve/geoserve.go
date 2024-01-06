@@ -56,13 +56,13 @@ func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 	if dbFile != "" {
 		server.db, lastModified, err = readDbFromFile(dbFile)
 		if err != nil {
-			return nil, errors.New("unable to read DB from file: %v", err)
+			return nil, errors.New("unable to read DB from file %v: %v", dbFile, err)
 		}
 	} else {
 		server.dbURL = dbURL
 		server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
 		if err != nil {
-			return nil, errors.New("unable to read DB from web: %v", err)
+			return nil, errors.New("unable to read DB from web url %v: %v", server.dbURL, err)
 		}
 	}
 	go server.run()
