@@ -35,6 +35,7 @@ type GeoServer struct {
 	cache    *lru.Cache
 	cacheGet chan get
 	dbUpdate chan *geoip2.Reader
+	isCity   bool
 }
 
 // get encapsulates a request to geolocate an ip address
@@ -55,18 +56,13 @@ func NewServer(dbFile, dbURL string) (server *GeoServer, err error) {
 	var lastModified time.Time
 	server.dbURL = dbURL
 	if dbFile != "" {
-		server.db, lastModified, err = readDbFromFile(dbFile)
+		server.db, lastModified, err = server.readDbFromFile(dbFile)
 		if err != nil {
 			return nil, errors.New("unable to read DB from file %v: %v", dbFile, err)
 		}
 	} else {
 		server.dbURL = dbURL
-		/*
-			server.db, lastModified, err = readDbFromWeb(server.dbURL, time.Time{})
-			if err != nil {
-				return nil, errors.New("unable to read DB from web url %v: %v", server.dbURL, err)
-			}
-		*/
+		// We'll start with an empty DB and will fetch new versions automatically.
 	}
 	go server.run()
 	go server.keepDbCurrent(lastModified)
@@ -136,8 +132,13 @@ func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
 	if server.db == nil {
 		return nil, errors.New("No database available")
 	}
-	//geoData, err := server.db.Country(net.ParseIP(ip))
-	geoData, err := server.db.City(net.ParseIP(ip))
+	var geoData interface{}
+	var err error
+	if server.isCity {
+		geoData, err = server.db.City(net.ParseIP(ip))
+	} else {
+		geoData, err = server.db.Country(net.ParseIP(ip))
+	}
 	if err != nil {
 		return nil, errors.New("Unable to look up ip address %s: %s", ip, err)
 	}
@@ -166,7 +167,7 @@ func (server *GeoServer) updateDb(lastModified time.Time) (time.Time, error) {
 	defer func() {
 		time.Sleep(sleepInterval)
 	}()
-	db, modifiedTime, err := readDbFromWeb(server.dbURL, lastModified)
+	db, modifiedTime, err := server.readDbFromWeb(server.dbURL, lastModified)
 	if err == errNotModified {
 		sleepInterval = 5 * time.Minute
 		return time.Time{}, err
@@ -180,7 +181,7 @@ func (server *GeoServer) updateDb(lastModified time.Time) (time.Time, error) {
 }
 
 // readDbFromFile reads the MaxMind database and timestamp from a file
-func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
+func (server *GeoServer) readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
 	dbData, err := os.ReadFile(dbFile)
 	if err != nil {
 		return nil, time.Time{}, errors.New("Unable to read db file %s: %s", dbFile, err)
@@ -199,7 +200,7 @@ func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
 }
 
 // readDbFromWeb reads the MaxMind database and timestamp from the web
-func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.Time, error) {
+func (server *GeoServer) readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.Time, error) {
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, time.Time{}, errors.New("unable to construct HTTP request for file: %v", err)
