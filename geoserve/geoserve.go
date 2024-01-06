@@ -136,7 +136,8 @@ func (server *GeoServer) lookupDB(ip string) ([]byte, error) {
 	if server.db == nil {
 		return nil, errors.New("No database available")
 	}
-	geoData, err := server.db.Country(net.ParseIP(ip))
+	//geoData, err := server.db.Country(net.ParseIP(ip))
+	geoData, err := server.db.City(net.ParseIP(ip))
 	if err != nil {
 		return nil, errors.New("Unable to look up ip address %s: %s", ip, err)
 	}
