@@ -3,7 +3,7 @@ package geoserve
 import (
 	"encoding/json"
 	gerrors "errors"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -161,7 +161,7 @@ func (server *GeoServer) keepDbCurrent(lastModified time.Time) {
 
 // readDbFromFile reads the MaxMind database and timestamp from a file
 func readDbFromFile(dbFile string) (*geoip2.Reader, time.Time, error) {
-	dbData, err := ioutil.ReadFile(dbFile)
+	dbData, err := os.ReadFile(dbFile)
 	if err != nil {
 		return nil, time.Time{}, errors.New("Unable to read db file %s: %s", dbFile, err)
 	}
@@ -213,7 +213,7 @@ func readDbFromWeb(url string, ifModifiedSince time.Time) (*geoip2.Reader, time.
 			return nil, time.Time{}, errors.New("unable to read from tar.gz: %v", err)
 		}
 		if f.Name() == "GeoLite2-Country.mmdb" {
-			dbData, err := ioutil.ReadAll(f)
+			dbData, err := io.ReadAll(f)
 			if err != nil {
 				return nil, time.Time{}, errors.New("unable to read GeoLite2-Country.mmdb: %v", err)
 			}
