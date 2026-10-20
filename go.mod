@@ -1,6 +1,6 @@
 module github.com/getlantern/go-geoserve
 
-go 1.20
+go 1.24
 
 require (
 	github.com/getlantern/errors v1.0.1
@@ -19,7 +19,7 @@ require (
 	github.com/getlantern/ops v0.0.0-20190325191751-d70cb0d6f85f // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/golang/snappy v0.0.2 // indirect
-	github.com/klauspost/compress v1.11.4 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/nwaples/rardecode v1.1.0 // indirect
 	github.com/oschwald/maxminddb-golang v1.6.0 // indirect
